@@ -12,25 +12,13 @@
 #define _NORMALMAP 1
 
 #if defined(SHADER_API_MOBILE)
-    #define _ADDITIONAL_LIGHTS_VERTEX
-#else              
-    #pragma multi_compile_fragment  _  _MAIN_LIGHT_SHADOWS_CASCADE
-
-//#define DYNAMIC_SCREEN_SPACE_OCCLUSION
-#pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
-    
-//#define DYNAMIC_ADDITIONAL_LIGHTS
-#pragma multi_compile_fragment _ _ADDITIONAL_LIGHTS
-
-
-//#define DYNAMIC_ADDITIONAL_LIGHT_SHADOWS
-#pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
+#else
+    #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
+    #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
 
     #define _SHADOWS_SOFT 1
     
     #define _REFLECTION_PROBE_BLENDING
-    //#pragma shader_feature_fragment _REFLECTION_PROBE_BOX_PROJECTION
-    // We don't need a keyword for this! the w component of the probe position already branches box vs non-box, & so little cost on pc it doesn't matter
     #define _REFLECTION_PROBE_BOX_PROJECTION 
 
 // Begin Injection STANDALONE_DEFINES from Injection_SSR.hlsl ----------------------------------------------------------
@@ -42,6 +30,10 @@
 // End Injection STANDALONE_DEFINES from Injection_SSR.hlsl ----------------------------------------------------------
 
 #endif
+
+// EVROEDIT: Changed to always compile for per pixel maybe?
+#pragma multi_compile_fragment _ _MAIN_LIGHT_SHADOWS_CASCADE
+#pragma multi_compile_fragment _ _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHTS_VERTEX
 
 #pragma multi_compile_fragment _ _LIGHT_COOKIES
 #pragma multi_compile _ SHADOWS_SHADOWMASK

@@ -20,8 +20,8 @@
 #endif
 
 // EVROEDIT: Changed to always compile for per pixel maybe?
-#pragma multi_compile_fragment  _  _MAIN_LIGHT_SHADOWS_CASCADE
-#pragma multi_compile_fragment _ _ADDITIONAL_LIGHTS
+#pragma multi_compile_fragment _ _MAIN_LIGHT_SHADOWS_CASCADE
+#pragma multi_compile_fragment _ _ADDITIONAL_LIGHTS _ADDITIONAL_LIGHTS_VERTEX
 
 #pragma multi_compile_fragment _ _LIGHT_COOKIES
 #pragma multi_compile _ SHADOWS_SHADOWMASK
