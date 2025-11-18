@@ -2,7 +2,7 @@
  * Stress Level Zero Lighting functions
  */   
 
-#if !defined(SLZ_PBR_LIGHTING_SSR) && !defined(SHADER_API_MOBILE)
+#if !defined(SLZ_PBR_LIGHTING_SSR)
 #define SLZ_PBR_LIGHTING_SSR
 
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SLZLighting.hlsl"
@@ -63,8 +63,6 @@ void SLZImageBasedSpecularSSR(half3 diffuse, inout real3 specular, inout real3 S
     real3 reflectionProbe = GlossyEnvironmentReflection(reflectionDir, fragData.position, surfData.perceptualRoughness, AOSpecularOcclusion) * LitSpecularOcclusion;
 
     
-   
-#if !defined(SHADER_API_MOBILE)
     //ssrData.perceptualRoughness = -fresnelTerm * ssrData.perceptualRoughness + ssrData.perceptualRoughness;
    
     half RdotV = saturate(0.95 * dot(reflectionDir, -fragData.viewDir.xyz) + 0.05);
@@ -102,7 +100,6 @@ void SLZImageBasedSpecularSSR(half3 diffuse, inout real3 specular, inout real3 S
     SSRColor = SSR.rgb;
     reflectionProbe *= (1.0 - SSR.a * SSRLerp);
     SSRColor *= SSR.a * SSRLerp;
-#endif
 
     //UNITY_BRANCH if (BRANCH_SCREEN_SPACE_OCCLUSION)
     #if defined(_SCREEN_SPACE_OCCLUSION)
