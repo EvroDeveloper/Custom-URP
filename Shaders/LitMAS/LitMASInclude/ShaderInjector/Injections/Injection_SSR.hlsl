@@ -1,15 +1,13 @@
 //#!INJECT_BEGIN STANDALONE_DEFINES 0
 #pragma multi_compile _ _SLZ_SSR_ENABLED
 #pragma shader_feature_local _ _NO_SSR
-#if defined(_SLZ_SSR_ENABLED) && !defined(_NO_SSR) && !defined(SHADER_API_MOBILE)
+#if defined(_SLZ_SSR_ENABLED) && !defined(_NO_SSR)
 	#define _SSR_ENABLED
 #endif
 //#!INJECT_END
 
 //#!INJECT_BEGIN INCLUDES 0
-#if !defined(SHADER_API_MOBILE)
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SLZLightingSSR.hlsl"
-#endif
 //#!INJECT_END
 
 //#!INJECT_BEGIN INTERPOLATORS 1
