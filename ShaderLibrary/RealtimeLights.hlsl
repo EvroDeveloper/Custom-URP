@@ -93,16 +93,28 @@ float DistanceAttenuation(float distanceSqr, half2 distanceAttenuation)
 }
 
 // Matches Zero Lab Renderer attenuation
-float vr_DistanceFalloff( float distanceSqr, half lightRangeSqr)
+float vr_DistanceFalloff( float distanceSqr, half2 lightRangeSqr)
 {
+#if SHADER_HINT_NICE_QUALITY
     if(lightRangeSqr > 0.0)
     {
-        return 1.0 - pow( distanceSqr * lightRangeSqr, 0.175);
+        return 1.0 - pow( distanceSqr * lightRangeSqr.x, 0.175);
     }
     else
     {
         return 1.0;
     }
+#else
+    half realLightRangeSqr = 1.0 / (lightRangeSqr.y / -lightRangeSqr.x);
+    if(realLightRangeSqr > 0.0)
+    {
+        return 1.0 - pow( distanceSqr * realLightRangeSqr, 0.175);
+    }
+    else
+    {
+        return 1.0;
+    }
+#endif
 }
 
 half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAttenuation)
@@ -213,11 +225,13 @@ Light GetAdditionalPerObjectLight(int perObjectLightIndex, float3 positionWS)
     float distanceSqr = max(dot(lightVector, lightVector), HALF_MIN);
 
     half3 lightDirection = half3(lightVector * rsqrt(distanceSqr));
-#if true //testing
-    half attenuation = half(vr_DistanceFalloff(distanceSqr, distanceAndSpotAttenuation.x) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw));
-#else
-    half attenuation = half(DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw));
-#endif
+// #if true //testing
+//     half attenuation = half(vr_DistanceFalloff(distanceSqr, distanceAndSpotAttenuation.x) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw));
+// #else
+//     half attenuation = half(DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw));
+// #endif
+    half attenuation = half(vr_DistanceFalloff(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw));
+
 
     Light light;
     light.direction = lightDirection;
