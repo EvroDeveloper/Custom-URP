@@ -4,6 +4,7 @@
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/VolumeRendering.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/GlobalSamplers.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/VR_Fog.hlsl"
 
 TEXTURECUBE(_SkyTexture);
 int _SkyMipCount;
@@ -119,6 +120,17 @@ half4 VolumetricsSurf(half4 color, float3 positionWS, int surfaceType) {
     FroxelColor.rgb = surfaceType == 1 ? FroxelColor.rgb * color.a : FroxelColor.rgb;
 	color.rgb *= FroxelColor.a;
 	color.rgb += FroxelColor.rgb;
+
+    half2 vFogCoords = CalculateFogCoords(positionWS);
+
+    if(surfaceType == 1)
+    {
+        color.rgba = ApplyFog(color.rgba, vFogCoords, 1.0, 1.0);
+    }
+    else
+    {
+        color.rgb = ApplyFog(color.rgb, vFogCoords, 1.0);
+    }
 
 #endif
     return color;
