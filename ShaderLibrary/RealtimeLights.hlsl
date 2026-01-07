@@ -92,6 +92,19 @@ float DistanceAttenuation(float distanceSqr, half2 distanceAttenuation)
     return lightAtten * smoothFactor;
 }
 
+// Matches Zero Lab Renderer attenuation
+float vr_DistanceFalloff( float distanceSqr, half lightRangeSqr)
+{
+    if(lightRangeSqr > 0.0)
+    {
+        return 1.0 - pow( distanceSqr * lightRangeSqr, 0.175);
+    }
+    else
+    {
+        return 1.0;
+    }
+}
+
 half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAttenuation)
 {
     // Spot Attenuation with a linear falloff can be defined as
@@ -200,7 +213,11 @@ Light GetAdditionalPerObjectLight(int perObjectLightIndex, float3 positionWS)
     float distanceSqr = max(dot(lightVector, lightVector), HALF_MIN);
 
     half3 lightDirection = half3(lightVector * rsqrt(distanceSqr));
+#if true //testing
+    half attenuation = half(vr_DistanceFalloff(distanceSqr, distanceAndSpotAttenuation.x) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw));
+#else
     half attenuation = half(DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw));
+#endif
 
     Light light;
     light.direction = lightDirection;
