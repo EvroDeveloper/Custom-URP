@@ -54,7 +54,7 @@ half2 CalculateFogCoords( float3 posWs )
 
 half4 FogLinearInterpolation(half ramp)
 {	
-	half refactoredramp = clamp(ramp * 32, 0, 31) ;	
+	half refactoredramp = lerp(0, 30, ramp);	
 	half4 interpolated =  lerp(gradientFogArray[refactoredramp],gradientFogArray[refactoredramp+1], frac(refactoredramp) ) ;
 
 	half4 twoInterpolated = lerp(gradientStartColor, gradientEndColor, ramp);

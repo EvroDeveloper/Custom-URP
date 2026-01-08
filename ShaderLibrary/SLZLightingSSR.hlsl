@@ -212,6 +212,17 @@ real4 SLZPBRFragmentSSR(SLZFragData fragData, SLZSurfData surfData, SSRExtraData
     bool isWithinDepthError = abs(oldDepth - oldVertDepth) < 2 * ddzOld + HALF_MIN;
     float4 volColor = GetVolumetricColor(fragData.position);
     float3 output = surfData.occlusion * (surfData.albedo * diffuse) + surfData.emission;
+
+#if _SLZ_FLUORESCENCE
+    half4 fluorescenceAbsorb = diffuse * surfData.absorbance;
+    half absorbedB = fluorescenceAbsorb.b + fluorescenceAbsorb.a;
+    half absorbedG = absorbedB + fluorescenceAbsorb.g;
+    half absorbedR = absorbedG + fluorescenceAbsorb.r;
+
+    half3 litFluorescence = half3(absorbedR, absorbedG, absorbedB) * surfData.fluorescence;
+    output = max(output, litFluorescence);
+#endif
+
     output = surfaceType == 1 ? output * surfData.alpha : output; //Premultiply diffuse by alpha if surface is transparent
     output += surfData.occlusion * specular;
     UNITY_BRANCH if (ssrExtra.temporalWeight == 0 || !isWithinDepthError || SSRLerp < 0.0008 || oldScreenUV.x < 0 || oldScreenUV.y < 0 || oldScreenUV.x > 1 || oldScreenUV.y > 1)

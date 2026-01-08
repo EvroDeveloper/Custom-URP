@@ -87,6 +87,10 @@ struct SLZSurfData
     half roughnessT;
     half roughnessB;
 #endif
+#if defined(_SLZ_FLUORESCENCE)
+    half3 fluorescence;
+    half4 absorbance;
+#endif
 };
 
 
@@ -266,6 +270,14 @@ void SLZSurfDataAddAniso(inout SLZSurfData surf, half anisoAspect)
     half clampedRough = surf.roughness;// clamp(surf.roughness, 0.05, 1);
     surf.roughnessT = max(clampedRough * surf.anisoAspect + clampedRough, 0.001);
     surf.roughnessB = max(-clampedRough * surf.anisoAspect + clampedRough, 0.001);
+#endif
+}
+
+void SLZSurfDataAddFluorescence(inout SLZSurfData surf, half4 fluorescence, half4 absorbance)
+{
+#if defined(_SLZ_FLUORESCENCE)
+    surf.fluorescence = fluorescence;
+    surf.absorbance = absorbance;
 #endif
 }
 
@@ -1083,6 +1095,18 @@ half4 SLZPBRFragment(SLZFragData fragData, SLZSurfData surfData, int surfaceType
     // Combine the final lighting information
     //-------------------------------------------------------------------------------------------------
     half3 finalDiffuse = surfData.occlusion * (surfData.albedo * diffuse) + surfData.emission;
+
+#if _SLZ_FLUORESCENCE
+    half4 fluorescenceAbsorb = diffuse * surfData.absorbance;
+    half absorbedB = fluorescenceAbsorb.b + fluorescenceAbsorb.a;
+    half absorbedG = absorbedB + fluorescenceAbsorb.g;
+    half absorbedR = absorbedG + fluorescenceAbsorb.r;
+
+    half3 litFluorescence = half3(absorbedR, absorbedG, absorbedB) * surfData.fluorescence;
+
+    finalDiffuse = max(finalDiffuse, litFluorescence);
+#endif
+
     if (surfaceType == 1) finalDiffuse *= surfData.alpha;
     half3 finalSpecular = surfData.occlusion * specular;
     
