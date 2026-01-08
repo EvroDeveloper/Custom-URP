@@ -100,6 +100,9 @@ half4 Volumetrics(half4 color, float3 positionWS) {
     half4 FroxelColor = GetVolumetricColor(positionWS);
     color.rgb = FroxelColor.rgb + (color.rgb * FroxelColor.a);
 
+    half2 vFogCoords = CalculateFogCoords(positionWS);
+    color.rgb = ApplyFog(color.rgb, vFogCoords, 1.0);
+
 #endif
     return color;
 }
