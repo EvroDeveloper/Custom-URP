@@ -71,6 +71,9 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SLZLightingSSR.hlsl"
 #endif
 // End Injection INCLUDES from Injection_SSR.hlsl ----------------------------------------------------------
+// Begin Injection INCLUDES from Injection_zAO.hlsl ----------------------------------------------------------
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/VR_zAO.hlsl"
+// End Injection INCLUDES from Injection_zAO.hlsl ----------------------------------------------------------
 
 
 
@@ -281,6 +284,9 @@ half4 frag(VertOut i) : SV_Target
 	#endif
 // End Injection SPEC_AA from Injection_NormalMaps.hlsl ----------------------------------------------------------
 
+// Begin Injection PRE_FRAGDATA from Injection_zAO.hlsl ----------------------------------------------------------
+ao *= CalculateShapeAO(i.wPos, normalWS);
+// End Injection PRE_FRAGDATA from Injection_zAO.hlsl ----------------------------------------------------------
 
     #if defined(LIGHTMAP_ON)
         SLZFragData fragData = SLZGetFragData(i.vertex, i.wPos, normalWS, i.uv1.xy, i.uv1.zw, i.SHVertLights.xyz);
