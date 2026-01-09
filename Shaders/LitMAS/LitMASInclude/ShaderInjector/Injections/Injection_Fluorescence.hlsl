@@ -12,7 +12,7 @@ TEXTURE2D(_FluorescenceMap);
     half4 _Absorbance;
 //#!INJECT_END
 
-//#!INJECT_BEGIN PBR_VALUES 1
+//#!INJECT_BEGIN FRAG_POST_INPUTS 0
     half3 fluorescenceColor = SAMPLE_TEXTURE2D(_FluorescenceMap, sampler_BaseMap, uv_main).rgb * _FluorescenceColor.rgb;
 //#!INJECT_END
 

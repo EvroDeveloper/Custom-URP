@@ -13,6 +13,10 @@ Shader "SLZ/LitMAS/LitMAS Posespace"
         [HDR]_EmissionColor("Emission Color", Color) = (1,1,1,1)
         _EmissionFalloff("Emission Falloff", Float) = 1
         _BakedMutiplier("Emission Baked Mutiplier", Float) = 1
+        [Space(30)][Header(Fluorescence)][Space(10)][ToggleUI] _Fluorescence("Fluorescence Enable", Float) = 0
+        [NoScaleOffset]_FluorescenceMap("Fluorescence Map", 2D) = "black" {}
+        _FluorescenceColor("Fluorescence Color", Color) = (1,1,1,1)
+        _Absorbance("Absorbance", Color) = (0,0,0,1)
         [Space(30)][Header(Details)][Space(10)][Toggle(_DETAILS_ON)] _Details("Details enabled", Float) = 0
         _DetailMap("DetailMap", 2D) = "gray" {}
         [NoScaleOffset][SingleLineTexture][Space(20)][Header(Hit Setup)][Space(10)]_HitRamp("Hit Ramp", 2D) = "black" {}

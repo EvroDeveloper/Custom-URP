@@ -273,7 +273,7 @@ void SLZSurfDataAddAniso(inout SLZSurfData surf, half anisoAspect)
 #endif
 }
 
-void SLZSurfDataAddFluorescence(inout SLZSurfData surf, half4 fluorescence, half4 absorbance)
+void SLZSurfDataAddFluorescence(inout SLZSurfData surf, half3 fluorescence, half4 absorbance)
 {
 #if defined(_SLZ_FLUORESCENCE)
     surf.fluorescence = fluorescence;
@@ -1096,8 +1096,8 @@ half4 SLZPBRFragment(SLZFragData fragData, SLZSurfData surfData, int surfaceType
     //-------------------------------------------------------------------------------------------------
     half3 finalDiffuse = surfData.occlusion * (surfData.albedo * diffuse) + surfData.emission;
 
-#if _SLZ_FLUORESCENCE
-    half4 fluorescenceAbsorb = diffuse * surfData.absorbance;
+#if defined(_SLZ_FLUORESCENCE)
+    half4 fluorescenceAbsorb = half4(diffuse, 1.0) * surfData.absorbance;
     half absorbedB = fluorescenceAbsorb.b + fluorescenceAbsorb.a;
     half absorbedG = absorbedB + fluorescenceAbsorb.g;
     half absorbedR = absorbedG + fluorescenceAbsorb.r;

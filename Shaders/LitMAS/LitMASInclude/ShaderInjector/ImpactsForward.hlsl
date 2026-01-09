@@ -47,6 +47,9 @@
 // Begin Injection UNIVERSAL_DEFINES from Injection_SSR_CBuffer_Posespace.hlsl ----------------------------------------------------------
 #define _SSRTemporalMul 0
 // End Injection UNIVERSAL_DEFINES from Injection_SSR_CBuffer_Posespace.hlsl ----------------------------------------------------------
+// Begin Injection UNIVERSAL_DEFINES from Injection_Fluorescence.hlsl ----------------------------------------------------------
+#define _SLZ_FLUORESCENCE
+// End Injection UNIVERSAL_DEFINES from Injection_Fluorescence.hlsl ----------------------------------------------------------
 
 #if defined(LITMAS_FEATURE_LIGHTMAPPING)
     #pragma multi_compile _ LIGHTMAP_ON
@@ -131,6 +134,9 @@ SAMPLER(sampler_DetailMap);
 // Begin Injection UNIFORMS from Injection_Emission.hlsl ----------------------------------------------------------
 TEXTURE2D(_EmissionMap);
 // End Injection UNIFORMS from Injection_Emission.hlsl ----------------------------------------------------------
+// Begin Injection UNIFORMS from Injection_Fluorescence.hlsl ----------------------------------------------------------
+TEXTURE2D(_FluorescenceMap);
+// End Injection UNIFORMS from Injection_Fluorescence.hlsl ----------------------------------------------------------
 
 CBUFFER_START(UnityPerMaterial)
 // Begin Injection MATERIAL_CBUFFER_EARLY from Injection_Impacts_CBuffer.hlsl ----------------------------------------------------------
@@ -152,6 +158,11 @@ half  _Normals;
 	half  _EmissionFalloff;
 	half  _BakedMutiplier;
 // End Injection MATERIAL_CBUFFER from Injection_Emission.hlsl ----------------------------------------------------------
+// Begin Injection MATERIAL_CBUFFER from Injection_Fluorescence.hlsl ----------------------------------------------------------
+	half  _Fluorescence;
+    half4 _FluorescenceColor;
+    half4 _Absorbance;
+// End Injection MATERIAL_CBUFFER from Injection_Fluorescence.hlsl ----------------------------------------------------------
     int _Surface;
 CBUFFER_END
 
@@ -247,6 +258,9 @@ half4 frag(VertOut i) : SV_Target
     smoothness = lerp(smoothness, impactMASI.b, impactMASI.a);
     ao = min(ao, max(1.0 - impactMASI.a, impactMASI.g));
 // End Injection FRAG_POST_INPUTS from Injection_Impacts.hlsl ----------------------------------------------------------
+// Begin Injection FRAG_POST_INPUTS from Injection_Fluorescence.hlsl ----------------------------------------------------------
+    half3 fluorescenceColor = SAMPLE_TEXTURE2D(_FluorescenceMap, sampler_BaseMap, uv_main).rgb * _FluorescenceColor.rgb;
+// End Injection FRAG_POST_INPUTS from Injection_Fluorescence.hlsl ----------------------------------------------------------
 
 /*---------------------------------------------------------------------------------------------------------------------------*/
 /*---Sample Normal Map-------------------------------------------------------------------------------------------------------*/
@@ -330,6 +344,9 @@ half4 frag(VertOut i) : SV_Target
     SLZSurfData surfData = SLZGetSurfDataMetallicGloss(albedo.rgb, saturate(metallic), saturate(smoothness), ao, emission.rgb, albedo.a);
     half4 color = half4(1, 1, 1, 1);
 
+// Begin Injection PRE_LIGHTING_CALC from Injection_Fluorescence.hlsl ----------------------------------------------------------
+	SLZSurfDataAddFluorescence(surfData, fluorescenceColor, _Absorbance);
+// End Injection PRE_LIGHTING_CALC from Injection_Fluorescence.hlsl ----------------------------------------------------------
 
 // Begin Injection LIGHTING_CALC from Injection_SSR.hlsl ----------------------------------------------------------
 	#if defined(_SSR_ENABLED)

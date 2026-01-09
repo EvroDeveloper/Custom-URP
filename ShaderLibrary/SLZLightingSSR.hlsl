@@ -213,8 +213,8 @@ real4 SLZPBRFragmentSSR(SLZFragData fragData, SLZSurfData surfData, SSRExtraData
     float4 volColor = GetVolumetricColor(fragData.position);
     float3 output = surfData.occlusion * (surfData.albedo * diffuse) + surfData.emission;
 
-#if _SLZ_FLUORESCENCE
-    half4 fluorescenceAbsorb = diffuse * surfData.absorbance;
+#if defined(_SLZ_FLUORESCENCE)
+    half4 fluorescenceAbsorb = half4(diffuse, 1.0) * surfData.absorbance;
     half absorbedB = fluorescenceAbsorb.b + fluorescenceAbsorb.a;
     half absorbedG = absorbedB + fluorescenceAbsorb.g;
     half absorbedR = absorbedG + fluorescenceAbsorb.r;
