@@ -98,7 +98,7 @@ float vr_DistanceFalloff( float distanceSqr, half2 lightRangeSqr)
 #if SHADER_HINT_NICE_QUALITY
     if(lightRangeSqr > 0.0)
     {
-        return 1.0 - pow( distanceSqr * lightRangeSqr.x, 0.175);
+        return saturate(1.0 - pow( distanceSqr * lightRangeSqr.x, 0.175));
     }
     else
     {
@@ -108,7 +108,7 @@ float vr_DistanceFalloff( float distanceSqr, half2 lightRangeSqr)
     half realLightRangeSqr = 1.0 / (lightRangeSqr.y / -lightRangeSqr.x);
     if(realLightRangeSqr > 0.0)
     {
-        return 1.0 - pow( distanceSqr * realLightRangeSqr, 0.175);
+        return saturate(1.0 - pow( distanceSqr * realLightRangeSqr, 0.175));
     }
     else
     {

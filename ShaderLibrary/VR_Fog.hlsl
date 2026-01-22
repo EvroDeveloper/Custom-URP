@@ -10,7 +10,9 @@ uniform half2 gradientFogScaleAdd;
 uniform half3 gradientFogLimitColor;
 uniform half3 heightFogParams;
 uniform half3 heightFogColor;
+
 uniform half4 gradientFogArray[(int)32.0];
+
 uniform half4 gradientStartColor;
 uniform half4 gradientEndColor;
 
@@ -54,11 +56,15 @@ half2 CalculateFogCoords( float3 posWs )
 
 half4 FogLinearInterpolation(half ramp)
 {	
-	half refactoredramp = lerp(0, 30, ramp);	
-	half4 interpolated =  lerp(gradientFogArray[refactoredramp],gradientFogArray[refactoredramp+1], frac(refactoredramp) ) ;
-
-	half4 twoInterpolated = lerp(gradientStartColor, gradientEndColor, ramp);
-	return interpolated;
+	if(valveFogEnabled == 1)
+	{
+		half refactoredramp = lerp(0, 30, ramp);
+		return lerp(gradientFogArray[refactoredramp], gradientFogArray[refactoredramp+1], frac(refactoredramp));
+	}
+	else
+	{
+		return lerp(gradientStartColor, gradientEndColor, ramp);
+	}
 }
 
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -69,8 +75,6 @@ half3 ApplyFog( half3 c, half2 fogCoord, float fogMultiplier )
 		return c;
 	}
 	// Apply gradient fog
-	//half4 f = tex2D( gradientFogTexture, half2( fogCoord.x, 0.0f ) ).rgba;
-	//half4 f = gradientFogArray[ clamp(fogCoord.x * 32 , 0, 31) ].rgba;
 	half4 f = FogLinearInterpolation(fogCoord.x);
 
 	c.rgb = lerp( c.rgb, f.rgb * fogMultiplier, f.a );
@@ -89,7 +93,6 @@ half4 ApplyFog( half4 c, half2 fogCoord, float fogMultiplier, float ColorMultipl
 		return c;
 	}
 	// Apply gradient fog
-	//half4 f = tex2D( gradientFogTexture, half2( fogCoord.x, 0.0f ) ).rgba;
 	half4 f = FogLinearInterpolation(fogCoord.x);
 
 	c.rgb = lerp( c.rgb, f.rgb * fogMultiplier, f.a );
@@ -107,8 +110,5 @@ half3 ApplyFog( half3 c, half2 fogCoord )
 {
 	return ApplyFog( c.rgb, fogCoord.xy, 1.0 );
 }
-
-
-
 
 #endif
