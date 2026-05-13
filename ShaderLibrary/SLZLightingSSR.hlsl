@@ -211,6 +211,7 @@ real4 SLZPBRFragmentSSR(SLZFragData fragData, SLZSurfData surfData, SSRExtraData
     
     bool isWithinDepthError = abs(oldDepth - oldVertDepth) < 2 * ddzOld + HALF_MIN;
     float4 volColor = GetVolumetricColor(fragData.position);
+    half2 vFogCoords = CalculateFogCoords(fragData.position);
     float3 output = surfData.occlusion * (surfData.albedo * diffuse) + surfData.emission;
 
 #if defined(_SLZ_FLUORESCENCE)
@@ -235,6 +236,9 @@ real4 SLZPBRFragmentSSR(SLZFragData fragData, SLZSurfData surfData, SSRExtraData
         float3 oldColor = SAMPLE_TEXTURE2D_X_LOD(_CameraOpaqueTexture, sampler_TrilinearClamp, UnityStereoTransformScreenSpaceTex(oldScreenUV), 0).rgb;
 
 #if defined(_VOLUMETRICS_ENABLED)
+        
+        oldColor = UnapplyFog(oldColor, vFogCoords, 1.0);
+        
         oldColor = (oldColor - volColor.rgb) / max(volColor.a, 0.0001);
 #endif
 
@@ -277,8 +281,11 @@ real4 SLZPBRFragmentSSR(SLZFragData fragData, SLZSurfData surfData, SSRExtraData
     
     float4 finalColor = float4(output, surfData.alpha);
     finalColor = MixFogSurf(finalColor, -fragData.viewDir, ssrExtra.fogFactor, surfaceType);
+    
     #if defined(_VOLUMETRICS_ENABLED)
+    
     finalColor.rgb = volColor.rgb + finalColor.rgb * volColor.a;
+    finalColor.rgb = ApplyFog(finalColor.rgb, vFogCoords, 1.0);
 #endif
     return finalColor;//surfData.occlusion* (surfData.albedo * diffuse + specular) + surfData.emission;
 }
