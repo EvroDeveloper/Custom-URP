@@ -1,6 +1,6 @@
 // Copyright (c) Valve Corporation, All rights reserved. ======================================================================================================
 // Upgrade NOTE: excluded shader from DX11, OpenGL ES 2.0 because it uses unsized arrays
-#pragma exclude_renderers d3d11 gles
+//#pragma exclude_renderers d3d11 gles
 
 #ifndef VR_FOG_INCLUDED
 #define VR_FOG_INCLUDED
@@ -83,6 +83,24 @@ half3 ApplyFog( half3 c, half2 fogCoord, float fogMultiplier )
 	c.rgb = lerp( c.rgb, heightFogColor.rgb * fogMultiplier, fogCoord.y );
 
 	return c.rgb;
+}
+
+half3 UnapplyFog(half3 c, half2 fogCoord, float fogMultiplier)
+{
+    if (valveFogEnabled == 0)
+    {
+        return c;
+    }
+	
+	// Unapply height fog
+    c.rgb = (c.rgb - (heightFogColor.rgb * fogMultiplier * fogCoord.y)) / (1.0 / fogCoord.y);
+	
+	// Unapply gradient fog
+    half4 f = FogLinearInterpolation(fogCoord.x);
+
+    c.rgb = (c.rgb - (f.rgb * fogMultiplier * f.a)) / (1.0 / f.a);
+
+    return c.rgb;
 }
 
 //ALPHA Fog
