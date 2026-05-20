@@ -31,7 +31,7 @@ TEXTURE2D(g_tBRDFMap); SamplerState BRDF_linear_clamp_sampler; //Force sampler s
 
 
 //#if defined(_FLUORESCENCE)			
-float3 FluorescenceEmission(float4 lightingTerms, float4 Absorbance, float4 Fluorescence ){
+half3 FluorescenceEmission(half4 lightingTerms, half4 Absorbance, half4 Fluorescence ){
 //Using alpha ch as UV color
     
 // float3 LitFluorescence =  float3(
@@ -42,14 +42,14 @@ float3 FluorescenceEmission(float4 lightingTerms, float4 Absorbance, float4 Fluo
 // 								* vFluorescence.rgb ;
 // o.vColor.rgb = max(o.vColor.rgb, LitFluorescence.rgb);
 
-float4 FluorescenceAbsorb = lightingTerms * Absorbance;					
+half4 FluorescenceAbsorb = lightingTerms * Absorbance;					
 
 //Combine each color from high to low frequency to account for dual-excitation
-float Absorbed_B = FluorescenceAbsorb.b + FluorescenceAbsorb.a;
-float Absorbed_G = Absorbed_B + FluorescenceAbsorb.g;
-float Absorbed_R = Absorbed_G + FluorescenceAbsorb.r;
+half Absorbed_B = FluorescenceAbsorb.b + FluorescenceAbsorb.a;
+half Absorbed_G = Absorbed_B + FluorescenceAbsorb.g;
+half Absorbed_R = Absorbed_G + FluorescenceAbsorb.r;
 
-float3 LitFluorescence =  float3(Absorbed_R, Absorbed_G, Absorbed_B) * Fluorescence.rgb ;
+half3 LitFluorescence =  half3(Absorbed_R, Absorbed_G, Absorbed_B) * Fluorescence.rgb ;
 return LitFluorescence.rgb;					
 }
 //#endif
@@ -65,6 +65,12 @@ void BlendFluorescence(inout half3 Diffuse, half4 LightColors, BRDFData brdfData
 {
     #if defined(_FLUORESCENCE)
     Diffuse = max(Diffuse, FluorescenceEmission(LightColors, brdfData.absorbance ,brdfData.fluorescence ));
+    #endif
+}
+void BlendFluorescence(inout half3 Diffuse, half4 LightColors, half4 absorbance, half4 fluorescence)
+{
+    #if defined(_FLUORESCENCE)
+    Diffuse = max(Diffuse, FluorescenceEmission(LightColors, absorbance, fluorescence ));
     #endif
 }
 

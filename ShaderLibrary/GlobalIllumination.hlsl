@@ -333,6 +333,7 @@ half3 CalculateIrradianceFromReflectionProbes(half3 reflectVector, float3 positi
     return irradiance;
 }
 
+#ifndef VRLIGHTING_REFLECTIONS
 half3 GlossyEnvironmentReflection(half3 reflectVector, float3 positionWS, half perceptualRoughness, half occlusion)
 {
 #if !defined(_ENVIRONMENTREFLECTIONS_OFF)
@@ -358,6 +359,57 @@ half3 GlossyEnvironmentReflection(half3 reflectVector, float3 positionWS, half p
     return _GlossyEnvironmentColor.rgb * occlusion;
 #endif // _ENVIRONMENTREFLECTIONS_OFF
 }
+
+#else
+
+half3 GlossyEnvironmentReflection(half3 reflectVector, float3 positionWS, half perceptualRoughness, half occlusion)
+{
+    //float flRoughness = dot( vRoughness.x, 1 ); //only considering first value. Second was for the old anisotropic.
+
+    half mip = PerceptualRoughnessToMipmapLevel(perceptualRoughness);
+
+	float3 vReflectionDirWs0 = reflectVector;
+	#ifdef _REFLECTION_PROBE_BOX_PROJECTION
+        // Expand min and max to contain positionWS to avoid artifacts when camera is outside of the box projection volume
+        float4 boxMin0 = float4( min(unity_SpecCube0_BoxMin.xyz, positionWS - (float3)1), unity_SpecCube0_BoxMin.w );
+        float4 boxMax0 = float4( max(unity_SpecCube0_BoxMax.xyz, positionWS + (float3)1), unity_SpecCube0_BoxMax.w );
+		vReflectionDirWs0.xyz = BoxProjectedCubemapDirection( reflectVector, positionWS, unity_SpecCube0_ProbePosition, boxMin0, boxMax0 );
+	#endif
+
+    // return vReflectionDirWs0; //debug: visualize reflection vector before sampling
+
+	float3 vEnvMap0 = max( 0.0, DecodeHDREnvironment(SAMPLE_TEXTURECUBE_LOD(unity_SpecCube0, samplerunity_SpecCube0, vReflectionDirWs0, mip), unity_SpecCube0_HDR) );
+
+	#ifdef _REFLECTION_PROBE_BLENDING
+	{
+		const float flBlendFactor = 0.99999;
+		float flBlendLerp = saturate( unity_SpecCube0_BoxMin.w );
+		UNITY_BRANCH if ( flBlendLerp < flBlendFactor )
+		{
+			float3 vReflectionDirWs1 = reflectVector;
+			#ifdef _REFLECTION_PROBE_BOX_PROJECTION
+                // Expand min and max to contain positionWS to avoid artifacts when camera is outside of the box projection volume
+                float4 boxMin1 = float4( min(unity_SpecCube1_BoxMin.xyz, positionWS - (float3)1), unity_SpecCube1_BoxMin.w );
+                float4 boxMax1 = float4( max(unity_SpecCube1_BoxMax.xyz, positionWS + (float3)1), unity_SpecCube1_BoxMax.w );
+			    vReflectionDirWs1.xyz = BoxProjectedCubemapDirection( reflectVector, positionWS, unity_SpecCube1_ProbePosition, boxMin1, boxMax1 );
+			#endif
+
+			//float3 vEnvMap1 = max( 0.0, Unity_GlossyEnvironment( UNITY_PASS_TEXCUBE_SAMPLER( unity_SpecCube1, unity_SpecCube0 ), unity_SpecCube1_HDR, vReflectionDirWs1, flRoughness ) );
+			float3 vEnvMap1 = max( 0.0, DecodeHDREnvironment( SAMPLE_TEXTURECUBE_LOD(unity_SpecCube1, samplerunity_SpecCube1, vReflectionDirWs1, mip), unity_SpecCube1_HDR ) );
+			return lerp( vEnvMap1.rgb, vEnvMap0.rgb, flBlendLerp );
+		}
+		else
+		{
+			return vEnvMap0.rgb;
+		}
+	}
+	#else
+	{
+		return vEnvMap0.rgb;
+	}
+    #endif
+}
+#endif // VRLIGHTING_REFLECTIONS
 
 half3 GlossyEnvironmentReflection(half3 reflectVector, half perceptualRoughness, half occlusion)
 {

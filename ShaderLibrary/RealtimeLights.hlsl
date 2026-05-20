@@ -64,6 +64,7 @@ struct Light
 //                        Attenuation Functions                               /
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifndef VRLIGHTING_REALTIMEFALLOFF
 // Matches Unity Vanila attenuation
 // Attenuation smoothly decreases to light range.
 float DistanceAttenuation(float distanceSqr, half2 distanceAttenuation)
@@ -92,20 +93,15 @@ float DistanceAttenuation(float distanceSqr, half2 distanceAttenuation)
     return lightAtten * smoothFactor;
 }
 
+#else
 // Matches Zero Lab Renderer attenuation
-float vr_DistanceFalloff( float distanceSqr, half2 lightRangeSqr)
+float DistanceAttenuation( float distanceSqr, half2 lightRangeSqr)
 {
 #if SHADER_HINT_NICE_QUALITY
-    if(lightRangeSqr > 0.0)
-    {
-        return saturate(1.0 - pow( distanceSqr * lightRangeSqr.x, 0.175));
-    }
-    else
-    {
-        return 1.0;
-    }
+    half realLightRangeSqr = lightRangeSqr.x;
 #else
     half realLightRangeSqr = 1.0 / (lightRangeSqr.y / -lightRangeSqr.x);
+#endif
     if(realLightRangeSqr > 0.0)
     {
         return saturate(1.0 - pow( distanceSqr * realLightRangeSqr, 0.175));
@@ -114,8 +110,8 @@ float vr_DistanceFalloff( float distanceSqr, half2 lightRangeSqr)
     {
         return 1.0;
     }
-#endif
 }
+#endif // VRLIGHTING_REALTIMEFALLOFF
 
 half AngleAttenuation(half3 spotDirection, half3 lightDirection, half2 spotAttenuation)
 {
@@ -225,13 +221,7 @@ Light GetAdditionalPerObjectLight(int perObjectLightIndex, float3 positionWS)
     float distanceSqr = max(dot(lightVector, lightVector), HALF_MIN);
 
     half3 lightDirection = half3(lightVector * rsqrt(distanceSqr));
-// #if true //testing
-//     half attenuation = half(vr_DistanceFalloff(distanceSqr, distanceAndSpotAttenuation.x) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw));
-// #else
-//     half attenuation = half(DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw));
-// #endif
-    half attenuation = half(vr_DistanceFalloff(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw));
-
+    half attenuation = half(DistanceAttenuation(distanceSqr, distanceAndSpotAttenuation.xy) * AngleAttenuation(spotDirection.xyz, lightDirection, distanceAndSpotAttenuation.zw));
 
     Light light;
     light.direction = lightDirection;

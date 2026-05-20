@@ -1,10 +1,15 @@
 #ifndef VOLUMETRIC_CORE_INCLUDED
 #define VOLUMETRIC_CORE_INCLUDED
 
+#define VRLIGHTING_VALVEFOG
+
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/VolumeRendering.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/GlobalSamplers.hlsl"
+
+#ifdef VRLIGHTING_VALVEFOG
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/VR_Fog.hlsl"
+#endif
 
 TEXTURECUBE(_SkyTexture);
 int _SkyMipCount;
@@ -100,8 +105,10 @@ half4 Volumetrics(half4 color, float3 positionWS) {
     half4 FroxelColor = GetVolumetricColor(positionWS);
     color.rgb = FroxelColor.rgb + (color.rgb * FroxelColor.a);
 
+#ifdef VRLIGHTING_VALVEFOG
     half2 vFogCoords = CalculateFogCoords(positionWS);
     color.rgb = ApplyFog(color.rgb, vFogCoords, 1.0);
+#endif
 
 #endif
     return color;
@@ -124,16 +131,19 @@ half4 VolumetricsSurf(half4 color, float3 positionWS, int surfaceType) {
 	color.rgb *= FroxelColor.a;
 	color.rgb += FroxelColor.rgb;
 
+#ifdef VRLIGHTING_VALVEFOG
     half2 vFogCoords = CalculateFogCoords(positionWS);
-
+#if false
     if(surfaceType == 1)
     {
-        color.rgba = ApplyFog(color.rgba, vFogCoords, 1.0, 1.0);
+        color.rgba = ApplyFog(color.rgba, vFogCoords, 1.0, 0.0);
     }
     else
+#endif
     {
         color.rgb = ApplyFog(color.rgb, vFogCoords, 1.0);
     }
+#endif
 
 #endif
     return color;

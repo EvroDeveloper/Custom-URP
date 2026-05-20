@@ -120,6 +120,8 @@ half4 ApplyFog( half4 c, half2 fogCoord, float fogMultiplier, float ColorMultipl
 
 	c.rgb = lerp(c.rgb, half3(ColorMultiplier, ColorMultiplier, ColorMultiplier) , saturate(f.a + fogCoord.y) );
 
+	// return half4(c.rgb, c.a);
+
 	return half4(c.rgb, (1 - f.a) * c.a);
 }
 

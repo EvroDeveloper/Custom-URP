@@ -129,7 +129,7 @@ void SLZImageBasedSpecularSSR(half3 diffuse, inout real3 specular, inout real3 S
 
 real4 SLZPBRFragmentSSR(SLZFragData fragData, SLZSurfData surfData, SSRExtraData ssrExtra, int surfaceType = 0)
 {
-    real3 diffuse = real3(0.0h, 0.0h, 0.0h);
+    diffuseLight diffuse = (diffuseLight)0;
     real3 specular = real3(0.0h, 0.0h, 0.0h);
     //real2 dfg = SLZDFG(fragData.NoV, surfData.roughness);
     
@@ -140,18 +140,18 @@ real4 SLZPBRFragmentSSR(SLZFragData fragData, SLZSurfData surfData, SSRExtraData
     // Lightmapping diffuse and specular calculations
     //-------------------------------------------------------------------------------------------------
 
-    SLZGetLightmapLighting(diffuse, specular, fragData, surfData);
+    SLZGetLightmapLighting(diffuse.rgb, specular, fragData, surfData);
 
 #else 
     //-------------------------------------------------------------------------------------------------
     // Spherical harmonic diffuse calculations
     //-------------------------------------------------------------------------------------------------
 
-    SLZSHDiffuse(diffuse, fragData.normal);
+    SLZSHDiffuse(diffuse.rgb, fragData.normal);
 
 #endif
 
-    diffuse += fragData.vertexLighting; //contains both vertex lights and L2 coefficient of SH on mobile
+    diffuse.rgb += fragData.vertexLighting; //contains both vertex lights and L2 coefficient of SH on mobile
 
     //Apply SSAO to "indirect" sources (not really indirect, but that's what unity calls baked and image based lighting)
     AmbientOcclusionFactor ao = (AmbientOcclusionFactor)0;
@@ -211,17 +211,13 @@ real4 SLZPBRFragmentSSR(SLZFragData fragData, SLZSurfData surfData, SSRExtraData
     
     bool isWithinDepthError = abs(oldDepth - oldVertDepth) < 2 * ddzOld + HALF_MIN;
     float4 volColor = GetVolumetricColor(fragData.position);
+#ifdef VRLIGHTING_VALVEFOG
     half2 vFogCoords = CalculateFogCoords(fragData.position);
-    float3 output = surfData.occlusion * (surfData.albedo * diffuse) + surfData.emission;
+#endif
+    float3 output = surfData.occlusion * (surfData.albedo * diffuse.rgb) + surfData.emission;
 
-#if defined(_SLZ_FLUORESCENCE)
-    half4 fluorescenceAbsorb = half4(diffuse, 1.0) * surfData.absorbance;
-    half absorbedB = fluorescenceAbsorb.b + fluorescenceAbsorb.a;
-    half absorbedG = absorbedB + fluorescenceAbsorb.g;
-    half absorbedR = absorbedG + fluorescenceAbsorb.r;
-
-    half3 litFluorescence = half3(absorbedR, absorbedG, absorbedB) * surfData.fluorescence;
-    output = max(output, litFluorescence);
+#if defined(_FLUORESCENCE)
+    BlendFluorescence(output, diffuse, surfData.absorbance, surfData.fluorescence);
 #endif
 
     output = surfaceType == 1 ? output * surfData.alpha : output; //Premultiply diffuse by alpha if surface is transparent
@@ -236,8 +232,10 @@ real4 SLZPBRFragmentSSR(SLZFragData fragData, SLZSurfData surfData, SSRExtraData
         float3 oldColor = SAMPLE_TEXTURE2D_X_LOD(_CameraOpaqueTexture, sampler_TrilinearClamp, UnityStereoTransformScreenSpaceTex(oldScreenUV), 0).rgb;
 
 #if defined(_VOLUMETRICS_ENABLED)
-        
+
+#ifdef VRLIGHTING_VALVEFOG
         oldColor = UnapplyFog(oldColor, vFogCoords, 1.0);
+#endif
         
         oldColor = (oldColor - volColor.rgb) / max(volColor.a, 0.0001);
 #endif
@@ -285,7 +283,9 @@ real4 SLZPBRFragmentSSR(SLZFragData fragData, SLZSurfData surfData, SSRExtraData
     #if defined(_VOLUMETRICS_ENABLED)
     
     finalColor.rgb = volColor.rgb + finalColor.rgb * volColor.a;
+#ifdef VRLIGHTING_VALVEFOG
     finalColor.rgb = ApplyFog(finalColor.rgb, vFogCoords, 1.0);
+#endif
 #endif
     return finalColor;//surfData.occlusion* (surfData.albedo * diffuse + specular) + surfData.emission;
 }

@@ -6,6 +6,9 @@
 #ifndef SLZ_PBR_LIGHTING
 #define SLZ_PBR_LIGHTING
 
+#define VRLIGHTING_REFLECTIONS
+#define VRLIGHTING_REALTIMEFALLOFF
+
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/EntityLighting.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
@@ -26,9 +29,11 @@
     #define half4 half4
 #endif
 
-
-
-
+#if defined(_FLUORESCENCE)
+    #define diffuseLight half4
+#else
+    #define diffuseLight half3
+#endif
 
 //#define USE_MOBILE_BRDF 
 
@@ -87,8 +92,8 @@ struct SLZSurfData
     half roughnessT;
     half roughnessB;
 #endif
-#if defined(_SLZ_FLUORESCENCE)
-    half3 fluorescence;
+#if defined(_FLUORESCENCE)
+    half4 fluorescence;
     half4 absorbance;
 #endif
 };
@@ -273,9 +278,9 @@ void SLZSurfDataAddAniso(inout SLZSurfData surf, half anisoAspect)
 #endif
 }
 
-void SLZSurfDataAddFluorescence(inout SLZSurfData surf, half3 fluorescence, half4 absorbance)
+void SLZSurfDataAddFluorescence(inout SLZSurfData surf, half4 fluorescence, half4 absorbance)
 {
-#if defined(_SLZ_FLUORESCENCE)
+#if defined(_FLUORESCENCE)
     surf.fluorescence = fluorescence;
     surf.absorbance = absorbance;
 #endif
@@ -348,7 +353,7 @@ SLZAnisoSpecLightInfo SLZGetAnisoSpecLightInfo(const half3 normal, const half3 t
  * @param normal          Worldspace normal
  * @param lightDir        Unit vector pointing from the fragment to the light in worldspace
  */
-half3 SLZLambertDiffuse(const half3 attenLightColor, const half3 normal, const half3 lightDir)
+diffuseLight SLZLambertDiffuse(const diffuseLight attenLightColor, const half3 normal, const half3 lightDir)
 {
     return attenLightColor * saturate(dot(normal, lightDir));
 }
@@ -426,14 +431,16 @@ half4 SLZSampleBDRFLUTShadow( half NoV, half NoL, half shadowAttenuation)
  * @param surfData All relevant data relating to the surface properties at the fragment
  * @param lightColor Color of the halftime light
  */
-half3 SLZDiffuseBDRF(const SLZFragData fragData, const SLZSurfData surfData, const Light light)
+diffuseLight SLZDiffuseBDRF(const SLZFragData fragData, const SLZSurfData surfData, const Light light)
 {
+    diffuseLight attenuatedLight = (diffuseLight)light.color * (light.distanceAttenuation * light.shadowAttenuation);
+    diffuseLight diffuse = (diffuseLight)0;
     #if defined(_BRDFMAP)
-    return SLZSampleBDRFLUTShadow( fragData.NoV, dot(fragData.normal, light.direction), light.shadowAttenuation) * light.distanceAttenuation*light.color.rgb;
+        diffuse = SLZSampleBDRFLUTShadow( fragData.NoV, dot(fragData.normal, light.direction), light.shadowAttenuation) * (diffuseLight)attenuatedLight;
     #else
-    half3 attenuatedLight = light.color.rgb * (light.distanceAttenuation * light.shadowAttenuation);
-    return SLZLambertDiffuse(attenuatedLight, fragData.normal, light.direction);
+        diffuse = SLZLambertDiffuse(attenuatedLight, fragData.normal, light.direction);
     #endif
+    return diffuse;
 }
 
 /** 
@@ -959,10 +966,10 @@ half SLZSpecularHorizonOcclusion(half3 normal, half3 reflectionDir)
  * @param         surfData  Struct containing physical properties of the surface (specular color, roughness, etc)
  * @param         directSSAO Direct screen-space ambient occlusion factor       
  */
-void SLZMainLight(inout half3 diffuse, inout half3 specular, const SLZFragData fragData, const SLZSurfData surfData, half directSSAO)
+void SLZMainLight(inout diffuseLight diffuse, inout half3 specular, const SLZFragData fragData, const SLZSurfData surfData, half directSSAO)
 {
     Light mainLight = GetMainLight(fragData.shadowCoord, fragData.position, fragData.shadowMask);
-    half3 diffuseBRDF = SLZDiffuseBDRF(fragData, surfData, mainLight);
+    diffuseLight diffuseBRDF = SLZDiffuseBDRF(fragData, surfData, mainLight);
 
     //UNITY_BRANCH if (BRANCH_SCREEN_SPACE_OCCLUSION)
     #if defined(_SCREEN_SPACE_OCCLUSION)
@@ -977,10 +984,10 @@ void SLZMainLight(inout half3 diffuse, inout half3 specular, const SLZFragData f
         half3 shL1Dir = SLZSHSpecularDirection();
         half3 dominantDir = isMainLight ? mainLight.direction : shL1Dir;
         SLZDirectSpecLightInfo specInfo = SLZGetDirectLightInfo(fragData, dominantDir);
-        half3 dominantColor = isMainLight ? diffuseBRDF : max(half(0.0), diffuse);
+        diffuseLight dominantColor = isMainLight ? diffuseBRDF : (diffuseLight)max(half(0.0), diffuse);
         half NoLMul = SLZFakeSpecularFalloff(specInfo.NoL);
         NoLMul = isMainLight ? 1.0 : NoLMul;
-        specular += dominantColor * SLZDirectBRDFSpecular(specInfo, surfData, fragData) * NoLMul;
+        specular += dominantColor.rgb * SLZDirectBRDFSpecular(specInfo, surfData, fragData) * NoLMul;
     #elif !defined(DIRLIGHTMAP_COMBINED) || defined(SLZ_DISABLE_BAKED_SPEC)
         SLZDirectSpecLightInfo specInfo = SLZGetDirectLightInfo(fragData, mainLight.direction);
         specular += diffuseBRDF * SLZDirectBRDFSpecular(specInfo, surfData, fragData);
@@ -998,9 +1005,9 @@ void SLZMainLight(inout half3 diffuse, inout half3 specular, const SLZFragData f
  * @param         addLight  Struct containing the information about a given light (color, attenuation, shadowing, etc)
  * @param         directSSAO Direct screen-space ambient occlusion factor    
  */
-void SLZAddLight(inout half3 diffuse, inout half3 specular, const SLZFragData fragData, const SLZSurfData surfData, Light addLight, half directSSAO)
+void SLZAddLight(inout diffuseLight diffuse, inout half3 specular, const SLZFragData fragData, const SLZSurfData surfData, Light addLight, half directSSAO)
 {
-    half3 diffuseBRDF = SLZDiffuseBDRF(fragData, surfData, addLight);
+    diffuseLight diffuseBRDF = SLZDiffuseBDRF(fragData, surfData, addLight);
     //UNITY_BRANCH if (BRANCH_SCREEN_SPACE_OCCLUSION)
     #if defined(_SCREEN_SPACE_OCCLUSION)
     {
@@ -1010,7 +1017,7 @@ void SLZAddLight(inout half3 diffuse, inout half3 specular, const SLZFragData fr
 
     diffuse += diffuseBRDF;
     SLZDirectSpecLightInfo specInfo = SLZGetDirectLightInfo(fragData, addLight.direction);
-    specular += diffuseBRDF * SLZDirectBRDFSpecular(specInfo, surfData, fragData);
+    specular += diffuseBRDF.rgb * SLZDirectBRDFSpecular(specInfo, surfData, fragData);
 }
 
 /**
@@ -1025,8 +1032,8 @@ void SLZAddLight(inout half3 diffuse, inout half3 specular, const SLZFragData fr
  */
 half4 SLZPBRFragment(SLZFragData fragData, SLZSurfData surfData, int surfaceType = 0)
 {
-    half3 diffuse = half3(0.0h, 0.0h, 0.0h);
-    half3 specular = half3(0.0h, 0.0h, 0.0h);
+    diffuseLight diffuse = (diffuseLight)0;
+    half3 specular = (half3)0;
     //half2 dfg = SLZDFG(fragData.NoV, surfData.roughness);
        
     #if defined(LIGHTMAP_ON) 
@@ -1034,18 +1041,18 @@ half4 SLZPBRFragment(SLZFragData fragData, SLZSurfData surfData, int surfaceType
     // Lightmapping diffuse and specular calculations
     //-------------------------------------------------------------------------------------------------
         
-        SLZGetLightmapLighting(diffuse, specular, fragData, surfData);
+        SLZGetLightmapLighting(diffuse.rgb, specular, fragData, surfData);
     
     #else 
     //-------------------------------------------------------------------------------------------------
     // Spherical harmonic diffuse calculations
     //-------------------------------------------------------------------------------------------------
         
-        SLZSHDiffuse(diffuse, fragData.normal);
+        SLZSHDiffuse(diffuse.rgb, fragData.normal);
         
     #endif
     
-    diffuse += fragData.vertexLighting; //contains both vertex lights and L2 coefficient of SH on mobile
+    diffuse.rgb += fragData.vertexLighting; //contains both vertex lights and L2 coefficient of SH on mobile
     
     //Apply SSAO to "indirect" sources (not halfly indirect, but that's what unity calls baked and image based lighting) 
     AmbientOcclusionFactor ao = (AmbientOcclusionFactor)0;
@@ -1094,17 +1101,10 @@ half4 SLZPBRFragment(SLZFragData fragData, SLZSurfData surfData, int surfaceType
     //-------------------------------------------------------------------------------------------------
     // Combine the final lighting information
     //-------------------------------------------------------------------------------------------------
-    half3 finalDiffuse = surfData.occlusion * (surfData.albedo * diffuse) + surfData.emission;
+    half3 finalDiffuse = surfData.occlusion * (surfData.albedo * diffuse.rgb) + surfData.emission;
 
-#if defined(_SLZ_FLUORESCENCE)
-    half4 fluorescenceAbsorb = half4(diffuse, 1.0) * surfData.absorbance;
-    half absorbedB = fluorescenceAbsorb.b + fluorescenceAbsorb.a;
-    half absorbedG = absorbedB + fluorescenceAbsorb.g;
-    half absorbedR = absorbedG + fluorescenceAbsorb.r;
-
-    half3 litFluorescence = half3(absorbedR, absorbedG, absorbedB) * surfData.fluorescence;
-
-    finalDiffuse = max(finalDiffuse, litFluorescence);
+#if defined(_FLUORESCENCE)
+    BlendFluorescence(finalDiffuse, diffuse, surfData.absorbance, surfData.fluorescence);
 #endif
 
     if (surfaceType == 1) finalDiffuse *= surfData.alpha;
